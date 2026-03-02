@@ -2,18 +2,15 @@
 
 echo "🚀 Memasang proteksi Anti Tautan Server..."
 
-# File paths
 INDEX_FILE="/var/www/pterodactyl/resources/views/admin/servers/index.blade.php"
 VIEW_DIR="/var/www/pterodactyl/resources/views/admin/servers/view"
 TIMESTAMP=$(date -u +"%Y-%m-%d-%H-%M-%S")
 
-# Backup original files
 if [ -f "$INDEX_FILE" ]; then
   cp "$INDEX_FILE" "${INDEX_FILE}.bak_${TIMESTAMP}"
   echo "📦 Backup index file dibuat: ${INDEX_FILE}.bak_${TIMESTAMP}"
 fi
 
-# 1. Update Index File - Hanya admin ID 1 yang bisa manage, tapi Create New bisa untuk semua admin
 cat > "$INDEX_FILE" << 'EOF'
 @extends('layouts.admin')
 @section('title')
@@ -165,16 +162,14 @@ EOF
 
 echo "✅ Index file berhasil diproteksi (Create New bisa untuk semua admin)"
 
-# 2. Proteksi view server untuk admin selain ID 1 dengan efek blur sederhana
+
 mkdir -p "$VIEW_DIR"
 
-# Buat protection untuk semua view server
 find "$VIEW_DIR" -name "*.blade.php" | while read view_file; do
     if [ -f "$view_file" ]; then
         cp "$view_file" "${view_file}.bak_${TIMESTAMP}" 2>/dev/null
     fi
     
-    # Buat file view dengan protection sederhana - BLUR EFFECT
     cat > "$view_file" << 'EOF'
 @if(auth()->user()->id !== 1)
 {{-- BLUR PROTECTION FOR NON-ROOT ADMINS --}}
@@ -328,21 +323,17 @@ EOF
     echo "✅ Protected: $(basename "$view_file") dengan efek blur"
 done
 
-# Set permissions
 chmod 644 "$INDEX_FILE"
 find "$VIEW_DIR" -name "*.blade.php" -exec chmod 644 {} \;
 
-# Clear cache
-echo "🔄 Membersihkan cache..."
 cd /var/www/pterodactyl || exit
 php artisan view:clear
 php artisan cache:clear
 
-# Menampilkan pesan sukses dengan format yang lebih aman bagi shell
 echo ""
 echo "------------------------------------------------"
-echo " 🎉 PROTEKSI BERHASIL DIPASANG!"
-echo " ✅ Admin ID 1: Akses Penuh"
-echo " ✅ Admin Lain: Terproteksi"
-echo " 🛡 Security by: @KawakunChan"
+printf " 🎉 PROTEKSI BERHASIL DIPASANG!\n"
+printf " ✅ Admin ID 1: Akses Penuh\n"
+printf " ✅ Admin Lain: Terproteksi\n"
+printf " 🛡️ Security by: @KawakunChan\n"
 echo "------------------------------------------------"
