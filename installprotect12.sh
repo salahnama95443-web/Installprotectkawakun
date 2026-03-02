@@ -1,13 +1,14 @@
 #!/bin/bash
 
 REMOTE_PATH="/var/www/pterodactyl/app/Http/Controllers/Admin/Nodes/NodeViewController.php"
+VIEW_PATH="/var/www/pterodactyl/resources/views/admin/nodes/view/index.blade.php"
 TIMESTAMP=$(date -u +"%Y-%m-%d-%H-%M-%S")
-JALUR_CADANGAN="${JALUR_JARAK_JAUH}.bak_${CAP_WAKTU}"
+BACKUP_PATH="${REMOTE_PATH}.bak_${TIMESTAMP}"
 
 echo "🚀 Proteksi Anti Akses Settings..."
 
-jika [ -f "$REMOTE_PATH" ]; maka
-  mv "$REMOTE_PATH" "$BACKUP_PATH"
+if [ -f "$REMOTE_PATH" ]; then
+  cp "$REMOTE_PATH" "$BACKUP_PATH"
   echo "📦 File cadangan lama dibuat di $BACKUP_PATH"
 fi
 
@@ -19,293 +20,179 @@ cat > "$REMOTE_PATH" << 'EOF'
 
 namespace Pterodactyl\Http\Controllers\Admin\Nodes;
 
-gunakan Illuminate\View\View;
-gunakan Pterodactyl\Models\Node;
-gunakan Pterodactyl\Http\Controllers\Controller;
-gunakan Pterodactyl\Repositories\Eloquent\NodeRepository;
-gunakan Pterodactyl\Services\Nodes\NodeUpdateService;
-gunakan Pterodactyl\Services\Nodes\NodeCreationService;
-gunakan Pterodactyl\Services\Nodes\NodeDeletionService;
-gunakan Pterodactyl\Http\Requests\Admin\Node\NodeFormRequest;
-gunakan Pterodactyl\Contracts\Repository\AllocationRepositoryInterface;
-gunakan Pterodactyl\Http\Requests\Admin\Node\AllocationFormRequest;
+use Illuminate\View\View;
+use Pterodactyl\Models\Node;
+use Pterodactyl\Http\Controllers\Controller;
+use Pterodactyl\Repositories\Eloquent\NodeRepository;
+use Pterodactyl\Services\Nodes\NodeUpdateService;
+use Pterodactyl\Services\Nodes\NodeCreationService;
+use Pterodactyl\Services\Nodes\NodeDeletionService;
+use Pterodactyl\Http\Requests\Admin\Node\NodeFormRequest;
+use Pterodactyl\Contracts\Repository\AllocationRepositoryInterface;
+use Pterodactyl\Http\Requests\Admin\Node\AllocationFormRequest;
 
-kelas NodeViewController extends Controller
+class NodeViewController extends Controller
 {
-    /**
-     * 🔒 Fungsi tambahan: Cegah akses node dilihat oleh admin lain.
-     */
-    fungsi privat checkNodeAccess($request, Node $node = null)
+    private function checkNodeAccess($request)
     {
-        $user = $request->user();
-
-        // Admin (user id = 1) bebas akses semua
-        jika ($user->id === 1) {
-            kembali;
+        if ($request->user()->id !== 1) {
+            abort(403, '❌ akses ditolak protect by KawakunChan');
         }
-
-        // Jika bukan admin ID 1, tolak akses dengan efek blur dan error
-        batalkan(403, '✖️ 𝖺𝗄𝗌𝖾𝗌 𝖽𝗂𝗍𝗈𝗅𝖺𝗄 𝗉𝗋𝗈𝗍𝖾𝖼𝗍 𝖻𝗒 KawakunChan Tech');
     }
-
-    /**
-     * Menampilkan gambaran umum sebuah node untuk pengguna admin.
-     */
-    fungsi publik index(NodeRepository $repository, string $id): Lihat
+    public function index(NodeRepository $repository, string $id): View
     {
         $this->checkNodeAccess(request());
-        
         $node = $repository->getNodeWithResourceUsage($id);
-        
-        kembalikan tampilan('admin.nodes.view.index', [
+        return view('admin.nodes.view.index', [
             'node' => $node,
-            'statistik' => [
-                'versi' => $node->getAttribute('daemon_version'),
-                'sistem' => [
-                    'tipe' => $node->getAttribute('daemon_system_type'),
+            'stats' => [
+                'version' => $node->getAttribute('daemon_version'),
+                'system' => [
+                    'type' => $node->getAttribute('daemon_system_type'),
                     'arch' => $node->getAttribute('daemon_system_arch'),
-                    'versi' => $node->getAttribute('daemon_system_version'),
+                    'version' => $node->getAttribute('daemon_system_version'),
                 ],
                 'cpus' => $node->getAttribute('daemon_cpu_count'),
             ],
         ]);
     }
 
-    /**
-     * Menampilkan pengaturan untuk node tertentu.
-     */
-    fungsi publik pengaturan(string $id): Lihat
+    public function settings(string $id): View
     {
         $this->checkNodeAccess(request());
-        
         $node = Node::findOrFail($id);
-        
-        kembalikan tampilan('admin.nodes.view.settings', [
+        return view('admin.nodes.view.settings', [
             'node' => $node,
-            'lokasi' => \Pterodactyl\Models\Location::all(),
+            'locations' => \Pterodactyl\Models\Location::all(),
         ]);
     }
 
-    /**
-     * Menampilkan konfigurasi untuk node tertentu.
-     */
-    fungsi publik konfigurasi(string $id): Lihat
+    public function configuration(string $id): View
     {
         $this->checkNodeAccess(request());
-        
         $node = Node::findOrFail($id);
-        
-        kembalikan tampilan('admin.nodes.view.configuration', [
+        return view('admin.nodes.view.configuration', ['node' => $node]);
+    }
+
+    public function allocations(AllocationRepositoryInterface $repository, string $id): View
+    {
+        $this->checkNodeAccess(request());
+        $node = Node::findOrFail($id);
+        $allocations = $repository->getPaginatedAllocationsForNode($id, 50);
+        return view('admin.nodes.view.allocations', [
             'node' => $node,
+            'allocations' => $allocations,
         ]);
     }
 
-    /**
-     * Menampilkan alokasi untuk node tertentu.
-     */
-    fungsi publik alokasi(AllocationRepositoryInterface $repository, string $id): Lihat
+    public function servers(string $id): View
     {
         $this->checkNodeAccess(request());
-        
         $node = Node::findOrFail($id);
-        
-        $alokasi = $repositori->getPaginatedAllocationsForNode($id, 50);
-        
-        kembalikan tampilan('admin.nodes.view.allocations', [
-            'node' => $node,
-            'alokasi' => $alokasi,
-        ]);
-    }
-
-    /**
-     * Menampilkan server untuk node tertentu.
-     */
-    fungsi publik server(string $id): Lihat
-    {
-        $this->checkNodeAccess(request());
-        
-        $node = Node::findOrFail($id);
-        
         $servers = $node->servers()->with('user', 'egg')->paginate(50);
-        
-        kembalikan tampilan('admin.nodes.view.servers', [
+        return view('admin.nodes.view.servers', [
             'node' => $node,
-            'server' => $server,
+            'servers' => $servers,
         ]);
     }
 
-    /**
-     * Perbarui pengaturan node.
-     */
-    fungsi publik updateSettings(NodeFormRequest $request, NodeUpdateService $service, string $id): \Illuminate\Http\RedirectResponse
+    public function updateSettings(NodeFormRequest $request, NodeUpdateService $service, string $id)
     {
-        $this->checkNodeAccess(request());
-        
+        $this->checkNodeAccess($request);
         $node = Node::findOrFail($id);
         $service->update($node, $request->validated(), $request->user());
-        
-        kembalikan pengalihan()->rute('admin.nodes.view.settings', $node->id)
-            ->with('success', 'Pengaturan node berhasil diperbarui.');
+        return redirect()->route('admin.nodes.view.settings', $node->id)->with('success', 'Node settings updated.');
     }
 
-    /**
-     * Perbarui konfigurasi node.
-     */
-    fungsi publik updateConfiguration(NodeFormRequest $request, NodeUpdateService $service, string $id): \Illuminate\Http\RedirectResponse
+    public function updateConfiguration(NodeFormRequest $request, NodeUpdateService $service, string $id)
     {
-        $this->checkNodeAccess(request());
-        
+        $this->checkNodeAccess($request);
         $node = Node::findOrFail($id);
         $service->updateConfiguration($node, $request->validated());
-        
-        kembalikan pengalihan()->rute('admin.nodes.view.configuration', $node->id)
-            ->with('success', 'Konfigurasi node berhasil diperbarui.');
+        return redirect()->route('admin.nodes.view.configuration', $node->id)->with('success', 'Node configuration updated.');
     }
 
-    /**
-     * Buat alokasi baru untuk node.
-     */
-    public function createAllocation(AllocationFormRequest $request, NodeUpdateService $service, string $id): \Illuminate\Http\RedirectResponse
+    public function createAllocation(AllocationFormRequest $request, NodeUpdateService $service, string $id)
     {
-        $this->checkNodeAccess(request());
-        
+        $this->checkNodeAccess($request);
         $node = Node::findOrFail($id);
         $service->createAllocation($node, $request->validated());
-        
-        kembalikan pengalihan()->rute('admin.nodes.view.allocations', $node->id)
-            ->with('success', 'Alokasi berhasil dibuat.');
+        return redirect()->route('admin.nodes.view.allocations', $node->id)->with('success', 'Allocation created.');
     }
 
-    /**
-     * Hapus alokasi dari node.
-     */
-    fungsi publik deleteAllocation(string $id, string $allocationId, NodeDeletionService $service): \Illuminate\Http\RedirectResponse
+    public function deleteAllocation(string $id, string $allocationId, NodeDeletionService $service)
     {
         $this->checkNodeAccess(request());
-        
         $node = Node::findOrFail($id);
         $service->deleteAllocation($node, $allocationId);
-        
-        kembalikan pengalihan()->rute('admin.nodes.view.allocations', $node->id)
-            ->with('success', 'Alokasi berhasil dihapus.');
+        return redirect()->route('admin.nodes.view.allocations', $node->id)->with('success', 'Allocation deleted.');
     }
 
-    /**
-     * Hapus node.
-     */
-    fungsi publik deleteNode(string $id, NodeDeletionService $service): \Illuminate\Http\RedirectResponse
+    public function deleteNode(string $id, NodeDeletionService $service)
     {
         $this->checkNodeAccess(request());
-        
         $node = Node::findOrFail($id);
         $service->handle($node);
-        
-        kembalikan pengalihan()->rute('admin.nodes')
-            ->with('success', 'Node berhasil dihapus.');
+        return redirect()->route('admin.nodes')->with('success', 'Node deleted.');
     }
 }
-?>
+EOF
 
-# Juga proteksi file view template untuk efek blur
-VIEW_PATH="/var/www/pterodactyl/resources/views/admin/nodes/view"
-jika [ -d "$VIEW_PATH" ]; maka
-    # Indeks template cadangan jika ada
-    jika [ -f "$VIEW_PATH/index.blade.php" ]; maka
-        cp "$VIEW_PATH/index.blade.php" "$VIEW_PATH/index.blade.php.bak_$TIMESTAMP"
-    fi
-    
-    # Buat template dengan efek blur untuk admin lain
-    cat > "$VIEW_PATH/index.blade.php" << 'EOF'
+# Update View dengan efek blur (Semua teks dipertahankan)
+if [ -f "$VIEW_PATH" ]; then
+    cp "$VIEW_PATH" "${VIEW_PATH}.bak_${TIMESTAMP}"
+fi
+
+cat > "$VIEW_PATH" << 'EOF'
 @extends('layouts.admin')
 
-@section('judul')
-    Node: {{ $node->name }}
-@akhirbagian
+@section('title')
+    Nodes — {{ $node->name }}
+@endsection
 
-@section('header konten')
-    <h1>{{ $node->name }}<small>Gambaran umum node secara detail.</small></h1>
+@section('content-header')
+    <h1>{{ $node->name }}<small>{{ $node->location->short }}</small></h1>
     <ol class="breadcrumb">
         <li><a href="{{ route('admin.index') }}">Admin</a></li>
-        <li><a href="{{ route('admin.nodes') }}">Node</a></li>
+        <li><a href="{{ route('admin.nodes') }}">Nodes</a></li>
         <li class="active">{{ $node->name }}</li>
     </ol>
-@akhirbagian
+@endsection
 
-@section('konten')
-@php
-    $user = Auth::user();
-@endphp
-
-@if($user->id !== 1)
-    <div style="
-        posisi: tetap;
-        atas: 0;
-        kiri: 0;
-        lebar: 100%;
-        tinggi: 100%;
-        latar belakang: rgba(0,0,0,0.8);
-        filter latar belakang: buram(10px);
-        Indeks z: 9999;
-        tampilan: fleksibel;
-        justify-content: center;
-        sejajarkan item: tengah;
-        arah-fleksibel: kolom;
-        warna: putih;
-        font-family: Arial, sans-serif;
-        perataan teks: tengah;
-    ">
-        <div style="font-size: 48px; margin-bottom: 20px;">🚫</div>
-        <h1 style="color: #e74c3c; margin-bottom: 10px;">Akses Ditolak</h1>
-        <p style="font-size: 18px; margin-bottom: 20px;">Hanya Admin Utama yang dapat mengakses halaman ini</p>
-        <p style="font-size: 14px; color: #95a5a6;">dilindungi oleh KawakunChan Tech</p>
+@section('content')
+@if(auth()->user()->id !== 1)
+{{-- BLUR PROTECTION --}}
+<div style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); backdrop-filter:blur(15px); z-index:9999; display:flex; justify-content:center; align-items:center; flex-direction:column; color:white; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    <h1 style="font-size:3rem; margin-bottom:10px;">🛡️ Akses Terbatas</h1>
+    <p style="font-size:1.2rem; opacity:0.8;">Hanya Root Administrator (ID 1) yang bisa melihat detail Node.</p>
+    <div style="margin-top:20px; padding:10px 20px; background:rgba(255,255,255,0.1); border-radius:10px;">
+        Security by: <span style="color:#00d2ff; font-weight:bold;">@KawakunChan</span>
     </div>
-    @php
-        kode_respons_http(403);
-        KELUAR();
-    @endphp
+    <a href="{{ route('admin.nodes') }}" style="margin-top:30px; color:white; text-decoration:underline;">Kembali ke Daftar Node</a>
+</div>
 @endif
 
 <div class="row">
-    <div class="col-xs-12">
-        <div class="nav-tabs-custom nav-tabs-floating">
-            <ul class="nav nav-tabs">
-                <li class="active"><a href="{{ route('admin.nodes.view', $node->id) }}">Tentang</a></li>
-                <li><a href="{{ route('admin.nodes.view.settings', $node->id) }}">Pengaturan</a></li>
-                <li><a href="{{ route('admin.nodes.view.configuration', $node->id) }}">Konfigurasi</a></li>
-                <li><a href="{{ route('admin.nodes.view.allocations', $node->id) }}">Alokasi</a></li>
-                <li><a href="{{ route('admin.nodes.view.servers', $node->id) }}">Server</a></li>
-            </ul>
-        </div>
-    </div>
-</div>
-
-<div class="row">
     <div class="col-sm-8">
-        <div class="box box-primary">
-            <div class="box-header with-border">
-                <h3 class="box-title">Informasi</h3>
-            </div>
-            <div class="box-body">
-                <div class="row">
-                    <div class="col-xs-6">
-                        <strong>Versi Daemon</strong>
-                        <p class="text-muted">
-                            {{ $stats['versi'] ?? 'Tidak Tersedia' }}
-                            @if(($stats['version'] ?? null) === $node->daemonVersion)
-                                <span class="label label-success">Terbaru</span>
-                            @endif
-                        </p>
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="box box-primary">
+                    <div class="box-header with-border">
+                        <h3 class="box-title">Informasi Node</h3>
                     </div>
-                    <div class="col-xs-6">
-                        <strong>Informasi Sistem</strong>
-                        <p class="text-muted">
-                            {{ $stats['system']['type'] ?? 'Tidak Tersedia' }} ({{ $stats['system']['arch'] ?? 'Tidak Tersedia' }})<br>
-                            <small>{{ $stats['system']['version'] ?? 'Tidak Tersedia' }}</small>
-                        </p>
-                    </div>
-                    <div class="col-xs-6">
-                        <strong>Total Thread CPU</strong>
-                        <p class="text-muted">{{ $stats['cpus'] ?? 'Tidak Tersedia' }}</p>
+                    <div class="box-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Nama:</strong> {{ $node->name }}</p>
+                                <p><strong>Lokasi:</strong> {{ $node->location->short }}</p>
+                                <p><strong>Versi Wings:</strong> <span class="label label-info">{{ $stats['version'] ?? 'Tidak Tersedia' }}</span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Sistem:</strong> {{ $stats['system']['type'] ?? 'Tidak Tersedia' }} ({{ $stats['system']['arch'] ?? 'Tidak Tersedia' }})</p>
+                                <p><strong>Kernel:</strong> {{ $stats['system']['version'] ?? 'Tidak Tersedia' }}</p>
+                                <p><strong>CPU:</strong> {{ $stats['cpus'] ?? 'Tidak Tersedia' }}</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -330,15 +217,18 @@ jika [ -d "$VIEW_PATH" ]; maka
         </div>
     </div>
 </div>
-@akhirbagian
-Akhir dari
+@endsection
+EOF
 
-    echo "✅ Tampilan template dengan efek blur berhasil dipasang!"
-fi
+# Perbaikan Echo agar tidak Exit Code 2
+cd /var/www/pterodactyl || exit
+php artisan view:clear
+php artisan cache:clear
 
-echo "✅ Proteksi Anti Akses Admin Nodes View berhasil dipasang!"
-echo "📂 Lokasi pengontrol file: $REMOTE_PATH"
-echo "📂 Tampilan template lokasi: $VIEW_PATH"
-echo "🗂️ Lama file cadangan: $BACKUP_PATH (jika sebelumnya ada)"
-echo "🔒 Hanya Admin ID 1 yang bisa akses normal, admin lain akan melihat efek blur dan error 403"
-echo "🚫 Pesan error: 'akses ditolak, lindungi oleh @KawakunChan'"
+echo ""
+echo "------------------------------------------------"
+printf " ✅ Proteksi Anti Akses Berhasil!\n"
+printf " 📂 Lokasi File: $REMOTE_PATH\n"
+printf " 🔒 Hanya Admin ID 1 yang bisa akses normal\n"
+printf " 🛡️ Security by: @KawakunChan\n"
+echo "------------------------------------------------"
