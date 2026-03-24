@@ -2,19 +2,15 @@
 
 REMOTE_PATH="/var/www/pterodactyl/app/Http/Controllers/Api/Client/Servers/FileController.php"
 TIMESTAMP=$(date -u +"%Y-%m-%d-%H-%M-%S")
-BACKUP_PATH="${REMOTE_PATH}.bak_${TIMESTAMP}"
 
-echo "🚀 Memasang proteksi Anti Akses Server File Controller..."
+echo "🚀 Memasang Proteksi Anti Akses Server 1..."
 
-if [ -f "$REMOTE_PATH" ]; then
-  mv "$REMOTE_PATH" "$BACKUP_PATH"
-  echo "📦 Backup file lama dibuat di $BACKUP_PATH"
-fi
-
+# Pastikan folder tujuan ada
 mkdir -p "$(dirname "$REMOTE_PATH")"
 chmod 755 "$(dirname "$REMOTE_PATH")"
 
-cat > "$REMOTE_PATH" << 'EOF'
+# Tulis ulang file baru
+cat > "$REMOTE_PATH" <<'EOF'
 <?php
 
 namespace Pterodactyl\Http\Controllers\Api\Client\Servers;
@@ -63,7 +59,7 @@ class FileController extends ClientApiController
 
         // Jika server bukan milik user, tolak akses
         if ($server->owner_id !== $user->id) {
-            abort(403, 'Anda tidak memiliki akses ke server ini.');
+            abort(403, '𝗣𝗥𝗢𝗧𝗘𝗖𝗧 𝗕𝗬 𝗔𝗟 𝗞𝗔𝗪𝗔𝗞𝗨𝗡𝗖𝗛𝗔𝗡 t.me/KawakunChan.');
         }
     }
 
@@ -262,11 +258,10 @@ class FileController extends ClientApiController
         return new JsonResponse([], Response::HTTP_NO_CONTENT);
     }
 }
+
 EOF
 
+# Atur permission file
 chmod 644 "$REMOTE_PATH"
-
-echo "✅ Proteksi Anti Akses Server File Controller berhasil dipasang!"
+echo "✅ Proteksi Server Akses 1 berhasil dipasang!"
 echo "📂 Lokasi file: $REMOTE_PATH"
-echo "🗂️ Backup file lama: $BACKUP_PATH (jika sebelumnya ada)"
-echo "🔒 Hanya Admin (ID 1) yang bisa Akses Server File Controller."
