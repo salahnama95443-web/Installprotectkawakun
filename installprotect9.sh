@@ -2,30 +2,26 @@
 
 REMOTE_PATH="/var/www/pterodactyl/app/Services/Servers/DetailsModificationService.php"
 TIMESTAMP=$(date -u +"%Y-%m-%d-%H-%M-%S")
-BACKUP_PATH="${REMOTE_PATH}.bak_${TIMESTAMP}"
 
-echo "🚀 Memasang proteksi Anti Modifikasi Server..."
+echo "🚀 Memasang Proteksi Anti Modifikasi Detail Server..."
 
-if [ -f "$REMOTE_PATH" ]; then
-  mv "$REMOTE_PATH" "$BACKUP_PATH"
-  echo "📦 Backup file lama dibuat di $BACKUP_PATH"
-fi
-
+# Pastikan folder tujuan ada
 mkdir -p "$(dirname "$REMOTE_PATH")"
 chmod 755 "$(dirname "$REMOTE_PATH")"
 
-cat > "$REMOTE_PATH" << 'EOF'
+# Tulis ulang file baru
+cat > "$REMOTE_PATH" <<'EOF'
 <?php
 
 namespace Pterodactyl\Services\Servers;
 
 use Illuminate\Support\Arr;
 use Pterodactyl\Models\Server;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\ConnectionInterface;
 use Pterodactyl\Traits\Services\ReturnsUpdatedModels;
 use Pterodactyl\Repositories\Wings\DaemonServerRepository;
 use Pterodactyl\Exceptions\Http\Connection\DaemonConnectionException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class DetailsModificationService
 {
@@ -43,10 +39,10 @@ class DetailsModificationService
      */
     public function handle(Server $server, array $data): Server
     {
-        // 🚫 Batasi akses hanya untuk user ID 1
-        $user = Auth::user();
+        // 🧱 Tambahan: Batasi hanya user dengan ID 1 yang bisa ubah server
+        $user = auth()->user();
         if (!$user || $user->id !== 1) {
-            abort(403, '❌ Akses ditolak: hanya admin utama yang bisa mengubah detail server.');
+            throw new AccessDeniedHttpException('❌ Kamu tidak diizinkan mengubah detail server ini - 𝗣𝗥𝗢𝗧𝗘𝗖𝗧 𝗕𝗬 𝗔𝗟 𝗞𝗔𝗪𝗔𝗞𝗨𝗡𝗖𝗛𝗔𝗡 t.me/KawakunChan.');
         }
 
         return $this->connection->transaction(function () use ($data, $server) {
@@ -59,12 +55,12 @@ class DetailsModificationService
                 'description' => Arr::get($data, 'description') ?? '',
             ])->saveOrFail();
 
-            // Jika owner berubah, revoke token lama
+            // Revoke token jika owner berubah
             if ($server->owner_id !== $owner) {
                 try {
                     $this->serverRepository->setServer($server)->revokeUserJTI($owner);
                 } catch (DaemonConnectionException $exception) {
-                    // Abaikan error dari Wings offline
+                    // Biarkan jika gagal konek ke Wings
                 }
             }
 
@@ -72,11 +68,10 @@ class DetailsModificationService
         });
     }
 }
+
 EOF
 
+# Atur permission file
 chmod 644 "$REMOTE_PATH"
-
-echo "✅ Proteksi Anti Modifikasi Server berhasil dipasang!"
+echo "✅ Proteksi Anti Modifikasi Detail Server berhasil dipasang!"
 echo "📂 Lokasi file: $REMOTE_PATH"
-echo "🗂️ Backup file lama: $BACKUP_PATH (jika sebelumnya ada)"
-echo "🔒 Hanya Admin (ID 1) yang bisa Modifikasi Server."
