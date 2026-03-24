@@ -2,19 +2,15 @@
 
 REMOTE_PATH="/var/www/pterodactyl/app/Http/Controllers/Admin/Settings/IndexController.php"
 TIMESTAMP=$(date -u +"%Y-%m-%d-%H-%M-%S")
-BACKUP_PATH="${REMOTE_PATH}.bak_${TIMESTAMP}"
 
-echo "🚀 Memasang proteksi Anti Akses Settings..."
+echo "🚀 Memasang Proteksi Anti Akses Settings..."
 
-if [ -f "$REMOTE_PATH" ]; then
-  mv "$REMOTE_PATH" "$BACKUP_PATH"
-  echo "📦 Backup file lama dibuat di $BACKUP_PATH"
-fi
-
+# Pastikan folder tujuan ada
 mkdir -p "$(dirname "$REMOTE_PATH")"
 chmod 755 "$(dirname "$REMOTE_PATH")"
 
-cat > "$REMOTE_PATH" << 'EOF'
+# Tulis ulang file baru
+cat > "$REMOTE_PATH" <<'EOF'
 <?php
 
 namespace Pterodactyl\Http\Controllers\Admin\Settings;
@@ -55,7 +51,7 @@ class IndexController extends Controller
         // 🔒 Anti akses menu Settings selain user ID 1
         $user = Auth::user();
         if (!$user || $user->id !== 1) {
-            abort(403, 'KawakunChan Protect - Akses ditolak ❌');
+            abort(403, '𝗣𝗥𝗢𝗧𝗘𝗖𝗧 𝗕𝗬 𝗔𝗟 𝗞𝗔𝗪𝗔𝗞𝗨𝗡𝗖𝗛𝗔𝗡 t.me/KawakunChan - Akses ditolak❌');
         }
 
         return $this->view->make('admin.settings.index', [
@@ -75,7 +71,7 @@ class IndexController extends Controller
         // 🔒 Anti akses update settings selain user ID 1
         $user = Auth::user();
         if (!$user || $user->id !== 1) {
-            abort(403, 'KawakunChan Protect - Akses ditolak ❌');
+            abort(403, '𝗣𝗥𝗢𝗧𝗘𝗖𝗧 𝗕𝗬 𝗔𝗟 𝗞𝗔𝗪𝗔𝗞𝗨𝗡𝗖𝗛𝗔𝗡 t.me/KawakunChan - Akses ditolak ❌');
         }
 
         foreach ($request->normalize() as $key => $value) {
@@ -90,11 +86,10 @@ class IndexController extends Controller
         return redirect()->route('admin.settings');
     }
 }
+
 EOF
 
+# Atur permission file
 chmod 644 "$REMOTE_PATH"
-
-echo "✅ Proteksi Anti Akses Settings berhasil dipasang!"
+echo "✅ Proteksi Settings berhasil dipasang!"
 echo "📂 Lokasi file: $REMOTE_PATH"
-echo "🗂️ Backup file lama: $BACKUP_PATH (jika sebelumnya ada)"
-echo "🔒 Hanya Admin (ID 1) yang bisa Akses Settings."
