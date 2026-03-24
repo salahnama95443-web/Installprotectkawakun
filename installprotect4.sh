@@ -2,19 +2,15 @@
 
 REMOTE_PATH="/var/www/pterodactyl/app/Http/Controllers/Admin/Nodes/NodeController.php"
 TIMESTAMP=$(date -u +"%Y-%m-%d-%H-%M-%S")
-BACKUP_PATH="${REMOTE_PATH}.bak_${TIMESTAMP}"
 
-echo "🚀 Memasang proteksi Anti Akses Nodes..."
+echo "🚀 Memasang Proteksi Anti Akses Nodes..."
 
-if [ -f "$REMOTE_PATH" ]; then
-  mv "$REMOTE_PATH" "$BACKUP_PATH"
-  echo "📦 Backup file lama dibuat di $BACKUP_PATH"
-fi
-
+# Pastikan folder tujuan ada
 mkdir -p "$(dirname "$REMOTE_PATH")"
 chmod 755 "$(dirname "$REMOTE_PATH")"
 
-cat > "$REMOTE_PATH" << 'EOF'
+# Tulis ulang file baru
+cat > "$REMOTE_PATH" <<'EOF'
 <?php
 
 namespace Pterodactyl\Http\Controllers\Admin\Nodes;
@@ -44,7 +40,7 @@ class NodeController extends Controller
         // === 🔒 FITUR TAMBAHAN: Anti akses selain admin ID 1 ===
         $user = Auth::user();
         if (!$user || $user->id !== 1) {
-            abort(403, '🚫 Akses ditolak! Hanya admin ID 1 yang dapat membuka menu Nodes. ©Protect By KawakunChan');
+            abort(403, '🚫 Akses ditolak! Hanya admin ID 1 yang dapat membuka menu Nodes. ©𝗣𝗥𝗢𝗧𝗘𝗖𝗧 𝗕𝗬 𝗔𝗟 𝗞𝗔𝗪𝗔𝗞𝗨𝗡𝗖𝗛𝗔𝗡 t.me/KawakunChan');
         }
         // ======================================================
 
@@ -58,11 +54,10 @@ class NodeController extends Controller
         return $this->view->make('admin.nodes.index', ['nodes' => $nodes]);
     }
 }
+
 EOF
 
+# Atur permission file
 chmod 644 "$REMOTE_PATH"
-
-echo "✅ Proteksi Anti Akses Nodes berhasil dipasang!"
+echo "✅ Proteksi Nodes berhasil dipasang!"
 echo "📂 Lokasi file: $REMOTE_PATH"
-echo "🗂️ Backup file lama: $BACKUP_PATH (jika sebelumnya ada)"
-echo "🔒 Hanya Admin (ID 1) yang bisa Akses Nodes."
