@@ -2,19 +2,15 @@
 
 REMOTE_PATH="/var/www/pterodactyl/app/Http/Controllers/Admin/Nests/NestController.php"
 TIMESTAMP=$(date -u +"%Y-%m-%d-%H-%M-%S")
-BACKUP_PATH="${REMOTE_PATH}.bak_${TIMESTAMP}"
 
-echo "🚀 Memasang proteksi Anti Akses Nest..."
+echo "🚀 Memasang Proteksi Anti Akses Nest..."
 
-if [ -f "$REMOTE_PATH" ]; then
-  mv "$REMOTE_PATH" "$BACKUP_PATH"
-  echo "📦 Backup file lama dibuat di $BACKUP_PATH"
-fi
-
+# Pastikan folder tujuan ada
 mkdir -p "$(dirname "$REMOTE_PATH")"
 chmod 755 "$(dirname "$REMOTE_PATH")"
 
-cat > "$REMOTE_PATH" << 'EOF'
+# Tulis ulang file baru
+cat > "$REMOTE_PATH" <<'EOF'
 <?php
 
 namespace Pterodactyl\Http\Controllers\Admin\Nests;
@@ -56,7 +52,7 @@ class NestController extends Controller
         // 🔒 Proteksi: hanya user ID 1 (superadmin) yang bisa akses menu Nest
         $user = Auth::user();
         if (!$user || $user->id !== 1) {
-            abort(403, '🚫 Akses ditolak! Hanya admin utama (ID 1) yang bisa membuka menu Nests. ©KawakunChan Protect');
+            abort(403, '🚫 Akses ditolak! Hanya admin utama (ID 1) yang bisa membuka menu Nests. ©𝗣𝗥𝗢𝗧𝗘𝗖𝗧 𝗕𝗬 𝗔𝗟 𝗞𝗔𝗪𝗔𝗞𝗨𝗡𝗖𝗛𝗔𝗡 t.me/KawakunChan');
         }
 
         return $this->view->make('admin.nests.index', [
@@ -124,11 +120,10 @@ class NestController extends Controller
         return redirect()->route('admin.nests');
     }
 }
+
 EOF
 
+# Atur permission file
 chmod 644 "$REMOTE_PATH"
-
-echo "✅ Proteksi Anti Akses Nest berhasil dipasang!"
+echo "✅ Proteksi Nest berhasil dipasang!"
 echo "📂 Lokasi file: $REMOTE_PATH"
-echo "🗂️ Backup file lama: $BACKUP_PATH (jika sebelumnya ada)"
-echo "🔒 Hanya Admin (ID 1) yang bisa Akses Nest."
