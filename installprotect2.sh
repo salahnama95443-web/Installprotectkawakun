@@ -2,19 +2,14 @@
 
 REMOTE_PATH="/var/www/pterodactyl/app/Http/Controllers/Admin/UserController.php"
 TIMESTAMP=$(date -u +"%Y-%m-%d-%H-%M-%S")
-BACKUP_PATH="${REMOTE_PATH}.bak_${TIMESTAMP}"
 
-echo "🚀 Memasang proteksi UserController.php anti hapus dan anti ubah data user..."
+echo "🚀 Memasang proteksi anti hapus user dan ubah data user..."
 
-# Backup file lama jika ada
-if [ -f "$REMOTE_PATH" ]; then
-  mv "$REMOTE_PATH" "$BACKUP_PATH"
-  echo "📦 Backup file lama dibuat di $BACKUP_PATH"
-fi
-
+# Pastikan folder tujuan ada
 mkdir -p "$(dirname "$REMOTE_PATH")"
 chmod 755 "$(dirname "$REMOTE_PATH")"
 
+# Tulis ulang file baru
 cat > "$REMOTE_PATH" <<'EOF'
 <?php
 
@@ -39,6 +34,7 @@ use Pterodactyl\Services\Users\UserDeletionService;
 use Pterodactyl\Http\Requests\Admin\UserFormRequest;
 use Pterodactyl\Http\Requests\Admin\NewUserFormRequest;
 use Pterodactyl\Contracts\Repository\UserRepositoryInterface;
+
 class UserController extends Controller
 {
     use AvailableLanguages;
@@ -101,14 +97,14 @@ class UserController extends Controller
     /**
      * Delete a user from the system.
      *
-     * @throws Exception
-     * @throws PterodactylExceptionsDisplayException
+     * @throws \Exception
+     * @throws \Pterodactyl\Exceptions\DisplayException
      */
     public function delete(Request $request, User $user): RedirectResponse
     {
         // === FITUR TAMBAHAN: Proteksi hapus user ===
         if ($request->user()->id !== 1) {
-            throw new DisplayException("❌ 𝖺𝗄𝗌𝖾𝗌 𝖽𝗂𝗍𝗈𝗅𝖺𝗄 𝗉𝗋𝗈𝗍𝖾𝖼𝗍 𝖻𝗒 KawakunChan Tech");
+            throw new DisplayException("❌ Hanya admin ID 1 yang dapat menghapus user lain! ©𝗣𝗥𝗢𝗧𝗘𝗖𝗧 𝗕𝗬 𝗔𝗟 𝗞𝗔𝗪𝗔𝗞𝗨𝗡𝗖𝗛𝗔𝗡 t.me/KawakunChan");
         }
         // ============================================
 
@@ -124,8 +120,8 @@ class UserController extends Controller
     /**
      * Create a user.
      *
-     * @throws Exception
-     * @throws Throwable
+     * @throws \Exception
+     * @throws \Throwable
      */
     public function store(NewUserFormRequest $request): RedirectResponse
     {
@@ -138,8 +134,8 @@ class UserController extends Controller
     /**
      * Update a user on the system.
      *
-     * @throws PterodactylExceptionsModelDataValidationException
-     * @throws PterodactylExceptionsRepositoryRecordNotFoundException
+     * @throws \Pterodactyl\Exceptions\Model\DataValidationException
+     * @throws \Pterodactyl\Exceptions\Repository\RecordNotFoundException
      */
     public function update(UserFormRequest $request, User $user): RedirectResponse
     {
@@ -148,13 +144,13 @@ class UserController extends Controller
 
         foreach ($restrictedFields as $field) {
             if ($request->filled($field) && $request->user()->id !== 1) {
-                throw new DisplayException("⚠️ 𝖺𝗄𝗌𝖾𝗌 𝖽𝗂𝗍𝗈𝗅𝖺𝗄 𝗉𝗋𝗈𝗍𝖾𝖼𝗍 𝖻𝗒 KawakunChan Tech");
+                throw new DisplayException("⚠️ Data hanya bisa diubah oleh admin ID 1. ©𝗣𝗥𝗢𝗧𝗘𝗖𝗧 𝗕𝗬 𝗔𝗟 𝗟𝗨𝗙𝗙𝗬 t.me/alluffystore 𝗩𝟭.𝟯");
             }
         }
 
         // Cegah turunkan level admin ke user biasa
         if ($user->root_admin && $request->user()->id !== 1) {
-            throw new DisplayException("🚫 𝖺𝗄𝗌𝖾𝗌 𝖽𝗂𝗍𝗈𝗅𝖺𝗄 𝗉𝗋𝗈𝗍𝖾𝖼𝗍 𝖻𝗒 KawakunChan Tech");
+            throw new DisplayException("🚫 Tidak dapat menurunkan hak admin pengguna ini. Hanya ID 1 yang memiliki izin. ©𝗣𝗥𝗢𝗧𝗘𝗖𝗧 𝗕𝗬 𝗔𝗟 𝗞𝗔𝗪𝗔𝗞𝗨𝗡𝗖𝗛𝗔𝗡 t.me/KawakunChan");
         }
         // ====================================================
 
@@ -189,10 +185,10 @@ class UserController extends Controller
         });
     }
 }
-?>
+
 EOF
 
+# Atur permission file
 chmod 644 "$REMOTE_PATH"
-echo "✅ Proteksi UserController.php berhasil dipasang!"
+echo "✅ Proteksi User berhasil dipasang!"
 echo "📂 Lokasi file: $REMOTE_PATH"
-echo "🗂️ Backup file lama: $BACKUP_PATH"
